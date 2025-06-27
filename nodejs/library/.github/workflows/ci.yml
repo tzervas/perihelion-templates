@@ -1,0 +1,79 @@
+name: Node.js Library CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'nodejs/library/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'nodejs/library/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: nodejs/library/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: nodejs/library
+      run: npm ci
+    
+    - name: Lint
+      working-directory: nodejs/library
+      run: npm run lint
+    
+    - name: Build
+      working-directory: nodejs/library
+      run: npm run build
+    
+    - name: Test
+      working-directory: nodejs/library
+      run: npm run test:coverage
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: nodejs/library/coverage
+        flags: nodejs
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: nodejs/library/dist/
+
+  security:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+    
+    - name: Run CodeQL Analysis
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
