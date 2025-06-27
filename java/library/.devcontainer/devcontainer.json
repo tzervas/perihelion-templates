@@ -1,0 +1,34 @@
+{
+    "name": "Java Library Development",
+    "image": "mcr.microsoft.com/devcontainers/java:21",
+    "features": {
+        "ghcr.io/devcontainers/features/java:1": {
+            "version": "21",
+            "installMaven": false,
+            "installGradle": true
+        },
+        "ghcr.io/devcontainers/features/git:1": {
+            "version": "latest",
+            "ppa": false
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "vscjava.vscode-java-pack",
+                "vscjava.vscode-gradle",
+                "redhat.java",
+                "richardwillis.vscode-gradle-extension-pack",
+                "sonarsource.sonarlint-vscode",
+                "github.copilot",
+                "github.vscode-github-actions"
+            ]
+        }
+    },
+    "remoteUser": "vscode",
+    "postCreateCommand": "gradle wrapper && ./gradlew build",
+    "mounts": [
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+    ]
+}
