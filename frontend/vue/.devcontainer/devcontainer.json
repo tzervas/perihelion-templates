@@ -1,0 +1,48 @@
+{
+  "name": "Vue Development",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Vue.volar",
+        "Vue.vscode-typescript-vue-plugin",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "github.vscode-github-actions",
+        "github.copilot",
+        "github.copilot-chat",
+        "eamodio.gitlens",
+        "storybook.vscode-storybook",
+        "rvest.vs-code-prettier-eslint",
+        "streetsidesoftware.code-spell-checker",
+        "vitest.explorer",
+        "antfu.goto-alias"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": true
+        },
+        "[vue]": {
+          "editor.defaultFormatter": "Vue.volar"
+        }
+      }
+    }
+  },
+  "forwardPorts": [5173, 6006],
+  "postCreateCommand": "npm ci && npm run prepare",
+  "remoteUser": "node",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/node/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached"
+  ]
+}
