@@ -1,0 +1,63 @@
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - staticcheck
+    - gosimple
+    - ineffassign
+    - misspell
+    - nakedret
+    - prealloc
+    - unconvert
+    - unparam
+    - gocritic
+    - gosec
+    - revive
+    - bodyclose
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  revive:
+    rules:
+      - name: unexported-return
+        disabled: false
+      - name: errorf
+        disabled: false
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - unnamedResult
+      - hugeParam
+      - rangeValCopy
+
+issues:
+  exclude-rules:
+    - path: _test.go
+      linters:
+        - goconst
+        - dupl
+        - gosec
+
+run:
+  deadline: 5m
+  tests: true
+  modules-download-mode: readonly
+  skip-dirs:
+    - vendor/
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
