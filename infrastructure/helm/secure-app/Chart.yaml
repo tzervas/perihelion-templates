@@ -16,10 +16,15 @@ keywords:
 
 dependencies:
   - name: cert-manager
-    version: "^1.0.0"
+    version: "~1.15.3"  # Pin to secure, recent version
     repository: https://charts.jetstack.io
     condition: certManager.enabled
-  - name: prometheus
-    version: "^15.0.0"
+  - name: kube-prometheus-stack
+    version: "~61.7.2"  # Use comprehensive monitoring stack
     repository: https://prometheus-community.github.io/helm-charts
     condition: monitoring.enabled
+    
+# Annotations for security and compliance
+annotations:
+  "helm.sh/security-policy": "restricted"
+  "helm.sh/compliance": "security-hardened"

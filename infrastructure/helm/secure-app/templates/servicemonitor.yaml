@@ -10,8 +10,66 @@ spec:
     matchLabels:
       {{- include "secure-app.selectorLabels" . | nindent 6 }}
   endpoints:
-    - port: {{ .Values.monitoring.serviceMonitor.port }}
-      path: {{ .Values.monitoring.serviceMonitor.path }}
-      interval: {{ .Values.monitoring.serviceMonitor.interval }}
-      scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+  - port: {{ .Values.monitoring.serviceMonitor.port }}
+    interval: {{ .Values.monitoring.serviceMonitor.interval }}
+    scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+    path: {{ .Values.monitoring.serviceMonitor.path }}
+    scheme: http
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'go_.*'
+      action: drop
+---
+# PrometheusRule for security-focused alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "secure-app.fullname" . }}-security-alerts
+  labels:
+    {{- include "secure-app.labels" . | nindent 4 }}
+spec:
+  groups:
+  - name: {{ include "secure-app.fullname" . }}.security
+    rules:
+    # High memory usage alert
+    - alert: PodHighMemoryUsage
+      expr: |
+        (
+          container_memory_usage_bytes{namespace="{{ .Release.Namespace }}",pod=~"{{ include "secure-app.fullname" . }}-.*"} 
+          / 
+          container_spec_memory_limit_bytes{namespace="{{ .Release.Namespace }}",pod=~"{{ include "secure-app.fullname" . }}-.*"}
+        ) > 0.8
+      for: 2m
+      labels:
+        severity: warning
+        component: {{ include "secure-app.fullname" . }}
+      annotations:
+        summary: "Pod {{`{{ $labels.pod }}`}} has high memory usage"
+        description: "Pod {{`{{ $labels.pod }}`}} in namespace {{`{{ $labels.namespace }}`}} is using {{`{{ $value | humanizePercentage }}`}} of its memory limit."
+    
+    # Pod restart alert
+    - alert: PodRestartingTooOften
+      expr: |
+        increase(kube_pod_container_status_restarts_total{namespace="{{ .Release.Namespace }}",pod=~"{{ include "secure-app.fullname" . }}-.*"}[1h]) > 3
+      for: 0m
+      labels:
+        severity: warning
+        component: {{ include "secure-app.fullname" . }}
+      annotations:
+        summary: "Pod {{`{{ $labels.pod }}`}} is restarting too often"
+        description: "Pod {{`{{ $labels.pod }}`}} in namespace {{`{{ $labels.namespace }}`}} has restarted {{`{{ $value }}`}} times in the last hour."
+    
+    # Security context violation alert
+    - alert: SecurityContextViolation
+      expr: |
+        kube_pod_container_info{namespace="{{ .Release.Namespace }}",pod=~"{{ include "secure-app.fullname" . }}-.*",container_id!=""} 
+        unless on(pod, namespace, container) 
+        kube_pod_container_status_running{namespace="{{ .Release.Namespace }}",pod=~"{{ include "secure-app.fullname" . }}-.*"} == 1
+      for: 0m
+      labels:
+        severity: critical
+        component: security
+      annotations:
+        summary: "Potential security context violation detected"
+        description: "Pod {{`{{ $labels.pod }}`}} in namespace {{`{{ $labels.namespace }}`}} may be violating security context requirements."
 {{- end }}
