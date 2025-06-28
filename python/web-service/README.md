@@ -102,6 +102,23 @@ The devcontainer setup includes:
 - STRIDE analysis implementation
 - Dependency scanning
 - Container hardening
+- Pinned container versions with digest verification
+- Dockerize for secure service dependency management
+
+### Security Considerations
+
+**Development Container Security:**
+The devcontainer mounts host credentials (`.gitconfig` and `.gnupg`) for development convenience. 
+For enhanced security isolation:
+1. Comment out these volume mounts in `.devcontainer/docker-compose.yml`
+2. Configure git credentials manually inside the container
+3. Use container-specific GPG keys for commit signing
+
+**Container Image Security:**
+All container images are pinned to specific versions with SHA256 digests to ensure:
+- Reproducible builds
+- Protection against tag poisoning
+- Supply chain security
 
 ## API Documentation
 

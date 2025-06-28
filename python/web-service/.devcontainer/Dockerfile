@@ -15,22 +15,21 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_VERSION=1.7.1 \
     PATH="/home/vscode/.local/bin:$PATH"
 
-# Create non-root user
+# Create non-root user and install system dependencies
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     && apt-get update \
-    && apt-get install -y sudo git gpg \
+    && apt-get install -y \
+        sudo \
+        git \
+        gpg \
+        curl \
+        make \
+        postgresql-client \
+        libpq-dev \
+        wget \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    gpg \
-    make \
-    postgresql-client \
-    libpq-dev \
+    && chmod 0440 /etc/sudoers.d/$USERNAME \
     && rm -rf /var/lib/apt/lists/*
 
 # Install UV
@@ -78,9 +77,10 @@ ENV PYTHONWARNINGS="default,ignore:::pkg_resources" \
 RUN git config --global commit.gpgsign true \
     && git config --global tag.gpgsign true
 
-# Add wait-for-it script for service dependencies
-COPY --chown=$USERNAME:$USERNAME scripts/wait-for-it.sh /usr/local/bin/
-RUN sudo chmod +x /usr/local/bin/wait-for-it.sh
+# Install dockerize for service dependency management
+RUN sudo wget https://github.com/jwilder/dockerize/releases/download/v0.7.0/dockerize-linux-amd64-v0.7.0.tar.gz \
+    && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.7.0.tar.gz \
+    && sudo rm dockerize-linux-amd64-v0.7.0.tar.gz
 
 # Create log directory
 RUN sudo mkdir -p /var/log/app \
