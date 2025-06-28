@@ -1,0 +1,67 @@
+# /etc/rsyslog.conf - Security-hardened rsyslog configuration
+
+# Modules
+$ModLoad imuxsock # provides support for local system logging
+$ModLoad imklog   # provides kernel logging support
+$ModLoad immark   # provides --MARK-- message capability
+
+# Global directives
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+$RepeatedMsgReduction on
+$FileOwner syslog
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+$PrivDropToUser syslog
+$PrivDropToGroup syslog
+
+# Security: Drop privileges early
+$PrivDropToUser syslog
+$PrivDropToGroup syslog
+
+# Work directory
+$WorkDirectory /var/spool/rsyslog
+
+# Include all config files in /etc/rsyslog.d/
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+# Security logging rules
+auth,authpriv.*         /var/log/auth.log
+*.*;auth,authpriv.none  -/var/log/syslog
+cron.*                  /var/log/cron.log
+daemon.*                -/var/log/daemon.log
+kern.*                  -/var/log/kern.log
+lpr.*                   -/var/log/lpr.log
+mail.*                  -/var/log/mail.log
+user.*                  -/var/log/user.log
+
+# Security-specific logging
+# Log authentication failures
+auth.info               /var/log/auth.log
+authpriv.info           /var/log/auth.log
+
+# Log sudo usage
+local0.info             /var/log/sudo.log
+
+# Log failed login attempts
+auth.warn               /var/log/auth.log
+
+# Emergency messages to all users
+*.emerg                 :omusrmsg:*
+
+# Log to remote syslog server for security (uncomment if needed)
+# *.* @@remote-syslog-server:514
+
+# Security: Prevent log injection attacks
+$EscapeControlCharactersOnReceive on
+
+# Log rotation settings
+$LogRSyslogStatusMessages off
+
+# Drop messages from invalid sources
+$AllowedSender TCP, 127.0.0.1
+
+# Rate limiting to prevent DoS attacks
+$SystemLogRateLimitInterval 2
+$SystemLogRateLimitBurst 50
