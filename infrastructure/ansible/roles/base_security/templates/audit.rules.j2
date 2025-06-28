@@ -1,0 +1,53 @@
+# First rule - delete all
+-D
+
+# Increase the buffers to survive stress events.
+-b {{ audit_backlog_limit }}
+
+# Monitor system calls
+-a always,exit -F arch=b64 -S execve -k exec
+-a always,exit -F arch=b32 -S execve -k exec
+
+# Monitor file system
+-a always,exit -F arch=b64 -S mkdir,rmdir -F auid>=1000 -F auid!=4294967295 -k directory
+-a always,exit -F arch=b32 -S mkdir,rmdir -F auid>=1000 -F auid!=4294967295 -k directory
+-a always,exit -F arch=b64 -S unlink,rename,unlinkat,renameat -F auid>=1000 -F auid!=4294967295 -k delete
+-a always,exit -F arch=b32 -S unlink,rename,unlinkat,renameat -F auid>=1000 -F auid!=4294967295 -k delete
+
+# Monitor access to sensitive files
+-w /etc/passwd -p wa -k passwd_changes
+-w /etc/shadow -p wa -k shadow_changes
+-w /etc/group -p wa -k group_changes
+-w /etc/gshadow -p wa -k gshadow_changes
+-w /etc/security/opasswd -p wa -k password_changes
+
+# Monitor privileged commands
+-a always,exit -F path=/usr/bin/sudo -F perm=x -F auid>=1000 -F auid!=4294967295 -k sudo_usage
+-a always,exit -F path=/usr/bin/su -F perm=x -F auid>=1000 -F auid!=4294967295 -k su_usage
+
+# Monitor security configuration changes
+-w /etc/selinux/ -p wa -k selinux_changes
+-w /etc/apparmor/ -p wa -k apparmor_changes
+-w /etc/audit/ -p wa -k audit_changes
+-w /etc/pam.d/ -p wa -k pam_changes
+-w /etc/ssh/sshd_config -p wa -k sshd_config_changes
+
+# Monitor system administration actions
+-w /etc/sudoers -p wa -k sudoers_changes
+-w /etc/sudoers.d/ -p wa -k sudoers_changes
+
+# Monitor kernel module loading and unloading
+-w /sbin/insmod -p x -k modules
+-w /sbin/rmmod -p x -k modules
+-w /sbin/modprobe -p x -k modules
+
+# Monitor network configuration changes
+-a always,exit -F arch=b64 -S sethostname -S setdomainname -k network_changes
+-a always,exit -F arch=b32 -S sethostname -S setdomainname -k network_changes
+-w /etc/issue -p wa -k network_changes
+-w /etc/issue.net -p wa -k network_changes
+-w /etc/hosts -p wa -k network_changes
+-w /etc/network/ -p wa -k network_changes
+
+# Make the configuration immutable
+-e 2

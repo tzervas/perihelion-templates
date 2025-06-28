@@ -1,0 +1,155 @@
+---
+# Base security hardening tasks
+
+- name: Update all packages to latest version
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: full
+  when: ansible_os_family == "Debian"
+  tags: ["security", "patching"]
+
+- name: Install security packages
+  ansible.builtin.package:
+    name:
+      - fail2ban
+      - ufw
+      - unattended-upgrades
+      - auditd
+      - apparmor
+      - apparmor-utils
+      - rkhunter
+    state: present
+  tags: ["security", "packages"]
+
+- name: Configure automatic security updates
+  ansible.builtin.template:
+    src: "20auto-upgrades.j2"
+    dest: "/etc/apt/apt.conf.d/20auto-upgrades"
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+  tags: ["security", "patching"]
+
+- name: Configure UFW default policies
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: "{{ item }}"
+  loop:
+    - incoming
+    - outgoing
+    - routed
+  tags: ["security", "firewall"]
+
+- name: Configure SSH hardening
+  ansible.builtin.template:
+    src: "sshd_config.j2"
+    dest: "/etc/ssh/sshd_config"
+    owner: root
+    group: root
+    mode: "0600"
+    validate: "/usr/sbin/sshd -t -f %s"
+  notify: restart sshd
+  tags: ["security", "ssh"]
+
+- name: Configure PAM password policies
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^minlen', line: 'minlen = 14' }
+    - { regexp: '^dcredit', line: 'dcredit = -1' }
+    - { regexp: '^ucredit', line: 'ucredit = -1' }
+    - { regexp: '^lcredit', line: 'lcredit = -1' }
+    - { regexp: '^ocredit', line: 'ocredit = -1' }
+  tags: ["security", "authentication"]
+
+- name: Configure system-wide security limits
+  ansible.builtin.template:
+    src: "limits.conf.j2"
+    dest: "/etc/security/limits.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  tags: ["security", "limits"]
+
+- name: Configure audit rules
+  ansible.builtin.template:
+    src: "audit.rules.j2"
+    dest: "/etc/audit/rules.d/audit.rules"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: restart auditd
+  tags: ["security", "audit"]
+
+- name: Enable and configure fail2ban
+  block:
+    - name: Copy fail2ban configuration
+      ansible.builtin.template:
+        src: "jail.local.j2"
+        dest: "/etc/fail2ban/jail.local"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart fail2ban
+
+    - name: Ensure fail2ban is running
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: yes
+  tags: ["security", "fail2ban"]
+
+- name: Configure system logging
+  block:
+    - name: Configure rsyslog
+      ansible.builtin.template:
+        src: "rsyslog.conf.j2"
+        dest: "/etc/rsyslog.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart rsyslog
+
+    - name: Configure log rotation
+      ansible.builtin.template:
+        src: "logrotate.conf.j2"
+        dest: "/etc/logrotate.conf"
+        owner: root
+        group: root
+        mode: "0644"
+  tags: ["security", "logging"]
+
+- name: Configure AppArmor
+  block:
+    - name: Enable AppArmor
+      ansible.builtin.service:
+        name: apparmor
+        state: started
+        enabled: yes
+
+    - name: Set AppArmor to enforcing mode
+      ansible.builtin.command: aa-enforce /etc/apparmor.d/*
+      changed_when: false
+  tags: ["security", "apparmor"]
+
+- name: Configure system hardening
+  block:
+    - name: Configure sysctl security settings
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_file: /etc/sysctl.d/99-security.conf
+        reload: yes
+      loop:
+        - { name: "net.ipv4.conf.all.accept_redirects", value: "0" }
+        - { name: "net.ipv4.conf.all.accept_source_route", value: "0" }
+        - { name: "net.ipv4.conf.all.rp_filter", value: "1" }
+        - { name: "net.ipv4.tcp_syncookies", value: "1" }
+        - { name: "net.ipv6.conf.all.accept_redirects", value: "0" }
+        - { name: "kernel.randomize_va_space", value: "2" }
+  tags: ["security", "sysctl"]

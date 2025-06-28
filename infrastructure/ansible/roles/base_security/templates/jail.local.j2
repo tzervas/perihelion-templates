@@ -1,0 +1,41 @@
+[DEFAULT]
+bantime = {{ fail2ban_bantime }}
+findtime = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_maxretry }}
+banaction = ufw
+backend = systemd
+
+[sshd]
+enabled = true
+port = {{ ssh_port }}
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+
+[sshd-ddos]
+enabled = true
+port = {{ ssh_port }}
+filter = sshd-ddos
+logpath = /var/log/auth.log
+maxretry = 5
+
+[recidive]
+enabled = true
+filter = recidive
+logpath = /var/log/fail2ban.log
+bantime = 604800  ; 1 week
+findtime = 86400  ; 1 day
+maxretry = 5
+
+[http-auth]
+enabled = true
+filter = apache-auth
+logpath = /var/log/apache2/error.log
+maxretry = 3
+
+[php-url-fopen]
+enabled = true
+port = http,https
+filter = php-url-fopen
+logpath = /var/log/apache2/access.log
+maxretry = 3

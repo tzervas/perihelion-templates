@@ -1,0 +1,41 @@
+all:
+  children:
+    production:
+      children:
+        web_servers:
+          hosts:
+            web[01:03].example.com:
+          vars:
+            app_environment: production
+            ansible_user: app_user
+            ansible_become: true
+            
+        database_servers:
+          hosts:
+            db[01:02].example.com:
+          vars:
+            app_environment: production
+            ansible_user: db_user
+            ansible_become: true
+            
+    staging:
+      children:
+        web_servers:
+          hosts:
+            web-staging[01:02].example.com:
+          vars:
+            app_environment: staging
+            ansible_user: app_user
+            ansible_become: true
+            
+        database_servers:
+          hosts:
+            db-staging01.example.com:
+          vars:
+            app_environment: staging
+            ansible_user: db_user
+            ansible_become: true
+            
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/ssh/ssh_known_hosts'
