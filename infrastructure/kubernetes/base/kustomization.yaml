@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- network-policies/default-deny.yaml
+- security/pod-security-policy.yaml
+- rbac/restricted-role.yaml
+- workloads/secure-pod.yaml
+- workloads/secure-deployment.yaml
+- networking/secure-service.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: secure-templates
+
+namespace: default
