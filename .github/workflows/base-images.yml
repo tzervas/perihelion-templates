@@ -1,0 +1,65 @@
+name: Build Base DevContainer Images
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.devcontainer/base/**'
+      - '.github/workflows/base-images.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push-base-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: python-dev-base
+            dockerfile: .devcontainer/base/python/Dockerfile
+            context: .devcontainer/base/python
+          - name: rust-dev-base
+            dockerfile: .devcontainer/base/rust/Dockerfile
+            context: .devcontainer/base/rust
+          - name: java-dev-base
+            dockerfile: .devcontainer/base/java/Dockerfile
+            context: .devcontainer/base/java
+          - name: nodejs-dev-base
+            dockerfile: .devcontainer/base/nodejs/Dockerfile
+            context: .devcontainer/base/nodejs
+          - name: go-dev-base
+            dockerfile: .devcontainer/base/go/Dockerfile
+            context: .devcontainer/base/go
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image.name }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

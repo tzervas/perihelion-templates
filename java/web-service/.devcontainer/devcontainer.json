@@ -1,0 +1,70 @@
+{
+  "name": "Java Web Service Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges"
+  ],
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.m2,target=/home/vscode/.m2,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-spring-boot-dashboard",
+        "vscjava.vscode-spring-initializr",
+        "vscjava.vscode-spring-boot-dev-tools",
+        "vscjava.vscode-maven",
+        "redhat.vscode-xml",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "humao.rest-client",
+        "pivotal.vscode-spring-boot",
+        "redhat.fabric8-analytics",
+        "sonarsource.sonarlint-vscode",
+        "streetsidesoftware.code-spell-checker",
+        "eamodio.gitlens",
+        "GitHub.vscode-pull-request-github"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.format.settings.url": ".vscode/java-formatter.xml",
+        "java.format.settings.profile": "GoogleStyle",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.completion.importOrder": [
+          "java",
+          "javax",
+          "org.springframework",
+          "com",
+          "org"
+        ],
+        "java.saveActions.organizeImports": true
+      }
+    }
+  },
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "postCreateCommand": "./mvnw package -DskipTests",
+  "forwardPorts": [8080, 5432, 6379],
+  "containerEnv": {
+    "SPRING_PROFILES_ACTIVE": "dev"
+  },
+  "initializeCommand": "mkdir -p ./.docker/postgres-data ./.docker/redis-data",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace"
+}

@@ -1,0 +1,57 @@
+[package]
+name = "rust-web-service-template"
+version = "0.1.0"
+edition = "2021"
+authors = ["Tyler Zervas"]
+license = "MIT"
+description = "A template for creating secure Rust web services"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.4", features = ["limit", "load-shed", "timeout"] }
+tower-http = { version = "0.5", features = ["trace", "cors", "compression-full", "request-id", "validate-request", "auth"] }
+hyper = { version = "1.1", features = ["full"] }
+tokio = { version = "1.36", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+color-eyre = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+config = "0.14"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json"] }
+sea-orm = { version = "0.12", features = ["runtime-tokio-rustls", "macros", "postgres-array"] }
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+uuid = { version = "1.7", features = ["v4", "serde"] }
+time = { version = "0.3", features = ["serde"] }
+argon2 = "0.5"
+jsonwebtoken = "9.2"
+secrecy = "0.8"
+zeroize = "1.7"
+prometheus = "0.13"
+opentelemetry = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry-otlp = "0.14"
+
+[dev-dependencies]
+criterion = "0.5"
+test-case = "3.3"
+mockall = "0.12"
+proptest = "1.4"
+fake = { version = "2.9", features = ["derive"] }
+wiremock = "0.5"
+reqwest = { version = "0.11", features = ["json"] }
+tempfile = "3.10"
+rstest = "0.18"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+debug = true
+panic = "unwind"
+
+[[bench]]
+name = "benchmarks"
+harness = false

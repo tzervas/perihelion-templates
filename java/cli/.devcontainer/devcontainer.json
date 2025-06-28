@@ -1,0 +1,53 @@
+{
+  "name": "Java CLI Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges"
+  ],
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.m2,target=/home/vscode/.m2,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven",
+        "redhat.vscode-xml",
+        "redhat.fabric8-analytics",
+        "streetsidesoftware.code-spell-checker",
+        "eamodio.gitlens",
+        "GitHub.vscode-pull-request-github",
+        "sonarsource.sonarlint-vscode"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.format.settings.url": ".vscode/java-formatter.xml",
+        "java.format.settings.profile": "GoogleStyle",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.completion.importOrder": [
+          "java",
+          "javax",
+          "com",
+          "org"
+        ],
+        "java.saveActions.organizeImports": true
+      }
+    }
+  },
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "postCreateCommand": "./mvnw package"
+}
