@@ -28,9 +28,14 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "secure-app.serviceAccountName" . }}
+      automountServiceAccountToken: false
       containers:
         - name: {{ .Chart.Name }}
+          {{- if .Values.global.image.digest }}
+          image: "{{ .Values.global.image.registry }}/{{ .Values.global.image.repository }}:{{ .Values.global.image.tag }}@{{ .Values.global.image.digest }}"
+          {{- else }}
           image: "{{ .Values.global.image.registry }}/{{ .Values.global.image.repository }}:{{ .Values.global.image.tag }}"
+          {{- end }}
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           {{- with .Values.global.security.containerSecurityContext }}
           securityContext:
