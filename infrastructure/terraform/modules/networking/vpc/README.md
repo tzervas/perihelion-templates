@@ -59,8 +59,8 @@ module "vpc" {
 
 | Name | Version |
 |------|---------|
-| terraform | >= 1.0.0 |
-| aws | >= 4.0.0 |
+| terraform | >= 1.8.0 |
+| aws | >= 5.70.0 |
 
 ## Inputs
 
@@ -107,6 +107,23 @@ module "vpc" {
    - Network ACLs and security groups should be added
    - Route tables control traffic flow
 
+## Input Validation
+
+This module includes comprehensive input validation to ensure security best practices:
+
+1. **VPC CIDR Validation**
+   - Must be a valid CIDR block
+   - Should use private IP address ranges (RFC 1918)
+
+2. **High Availability Requirements**
+   - At least 2 private subnets required
+   - At least 2 availability zones required
+   - Availability zones must be unique
+
+3. **Security Monitoring**
+   - Flow logs retention must be valid CloudWatch period
+   - Minimum 30 days retention for security monitoring
+
 ## Best Practices
 
 1. Always enable flow logs for network monitoring
@@ -114,3 +131,5 @@ module "vpc" {
 3. Implement multiple AZs for high availability
 4. Tag resources appropriately
 5. Review and audit network flows regularly
+6. Use version constraints for Terraform and providers
+7. Follow naming conventions for consistency

@@ -2,11 +2,11 @@
 # This module creates a VPC with security-first design principles
 
 terraform {
-  required_version = ">= 1.0.0"
+  required_version = ">= 1.8.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 4.0.0"
+      version = ">= 5.70.0"
     }
   }
 }
@@ -170,6 +170,30 @@ resource "aws_iam_role" "flow_logs" {
   tags = var.tags
 }
 
+# Flow Logs IAM Policy Attachment
+resource "aws_iam_role_policy" "flow_logs" {
+  count = var.enable_flow_logs ? 1 : 0
+  name  = "${var.environment}-vpc-flow-logs-policy"
+  role  = aws_iam_role.flow_logs[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
 # Flow Logs CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "flow_logs" {
   count             = var.enable_flow_logs ? 1 : 0
@@ -178,4 +202,17 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
   kms_key_id       = var.kms_key_arn
 
   tags = var.tags
+}
+
+# Route table associations
+resource "aws_route_table_association" "public" {
+  count          = length(var.public_subnets)
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "private" {
+  count          = length(var.private_subnets)
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
 }
