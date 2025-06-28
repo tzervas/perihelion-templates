@@ -1,0 +1,19 @@
+{{- if and .Values.certManager.enabled .Values.certManager.certificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "secure-app.fullname" . }}
+  labels:
+    {{- include "secure-app.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "secure-app.fullname" . }}-tls
+  duration: {{ .Values.certManager.certificate.duration }}
+  renewBefore: {{ .Values.certManager.certificate.renewBefore }}
+  subject:
+    organizations:
+      {{- toYaml .Values.certManager.certificate.organization | nindent 6 }}
+  dnsNames:
+    {{- toYaml .Values.certManager.certificate.dnsNames | nindent 4 }}
+  issuerRef:
+    {{- toYaml .Values.certManager.certificate.issuerRef | nindent 4 }}
+{{- end }}

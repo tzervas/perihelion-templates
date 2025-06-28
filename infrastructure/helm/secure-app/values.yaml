@@ -1,0 +1,149 @@
+# Default values for secure-app
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # Image settings
+  image:
+    registry: "docker.io"
+    repository: nginx
+    tag: "1.25"
+    pullPolicy: IfNotPresent
+    # Optional digest for image verification
+    digest: ""
+  
+  # Security settings
+  security:
+    # Pod security context
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 3000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+    
+    # Network policies
+    networkPolicies:
+      enabled: true
+      ingressRules: []
+      egressRules: []
+
+# Deployment configuration
+deployment:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: "0.5"
+      memory: 256Mi
+  
+  # Probes configuration
+  probes:
+    liveness:
+      httpGet:
+        path: /healthz
+        port: http
+      initialDelaySeconds: 3
+      periodSeconds: 3
+    readiness:
+      httpGet:
+        path: /readyz
+        port: http
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+  hosts: []
+  tls: []
+
+# RBAC configuration
+rbac:
+  enabled: true
+  # Service account configuration
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+  # Role and RoleBinding configuration
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "replicasets"]
+      verbs: ["get", "list", "watch"]
+
+# Certificate management
+certManager:
+  enabled: false
+  # Certificate configuration
+  certificate:
+    enabled: false
+    duration: 2160h # 90 days
+    renewBefore: 360h # 15 days
+    organization:
+      - Security
+    dnsNames: []
+    issuerRef:
+      name: letsencrypt-prod
+      kind: ClusterIssuer
+
+# Monitoring configuration
+monitoring:
+  enabled: false
+  # ServiceMonitor configuration for Prometheus
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    port: metrics
+
+# Additional volumes
+volumes: []
+volumeMounts: []
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
