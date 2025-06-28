@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: secure-project
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Secure project with restricted permissions
+  
+  # Source repositories
+  sourceRepos:
+    - "https://github.com/example/*"
+    
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: secure-app
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+      
+  # Allowed cluster resources
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: "networking.k8s.io"
+      kind: NetworkPolicy
+      
+  # Allowed namespaced resources
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: Deployment
+    - group: "*"
+      kind: Service
+    - group: "*"
+      kind: ConfigMap
+    - group: "*"
+      kind: Secret
+    - group: "networking.k8s.io"
+      kind: NetworkPolicy
+    - group: "monitoring.coreos.com"
+      kind: ServiceMonitor
+    - group: "cert-manager.io"
+      kind: Certificate
+      
+  # Role bindings
+  roles:
+    - name: project-admin
+      description: Project admin with restricted permissions
+      policies:
+        - p, proj:secure-project:project-admin, applications, *, secure-project/*, allow
+      groups:
+        - secure-project-admins
+        
+  # Sync windows
+  syncWindows:
+    - kind: allow
+      schedule: "0 2 * * *"  # 2 AM daily
+      duration: 1h
+      applications:
+        - "*"
+      namespaces:
+        - secure-app
+      clusters:
+        - "*"
+        
+  # Resource management
+  orphanedResources:
+    warn: true
+    ignore:
+      - kind: ConfigMap
+        name: "kube-root-ca.crt"

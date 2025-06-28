@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: secure-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/example/secure-app.git
+    targetRevision: HEAD
+    path: helm
+    helm:
+      valueFiles:
+        - values.yaml
+      values: |
+        global:
+          security:
+            podSecurityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 3000
+              fsGroup: 2000
+            containerSecurityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            networkPolicies:
+              enabled: true
+              
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: secure-app
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
