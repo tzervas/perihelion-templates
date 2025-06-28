@@ -1,0 +1,108 @@
+# ServiceMonitor for Prometheus monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: secure-app-metrics
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: secure-app
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+---
+# PodMonitor for additional pod-level metrics
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: secure-app-pod-metrics
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: secure-app
+  podMetricsEndpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+# PrometheusRule for security-related alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: secure-app-alerts
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    app.kubernetes.io/component: monitoring
+spec:
+  groups:
+  - name: secure-app.rules
+    rules:
+    # High memory usage alert
+    - alert: PodHighMemoryUsage
+      expr: container_memory_usage_bytes{namespace="secure-namespace",pod=~"secure-deployment-.*"} / container_spec_memory_limit_bytes > 0.8
+      for: 2m
+      labels:
+        severity: warning
+        component: secure-app
+      annotations:
+        summary: "Pod {{ $labels.pod }} has high memory usage"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is using {{ $value | humanizePercentage }} of its memory limit."
+    
+    # High CPU usage alert
+    - alert: PodHighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{namespace="secure-namespace",pod=~"secure-deployment-.*"}[5m]) / container_spec_cpu_quota * container_spec_cpu_period > 0.8
+      for: 2m
+      labels:
+        severity: warning
+        component: secure-app
+      annotations:
+        summary: "Pod {{ $labels.pod }} has high CPU usage"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is using {{ $value | humanizePercentage }} of its CPU limit."
+    
+    # Pod restart alert
+    - alert: PodRestartingTooOften
+      expr: increase(kube_pod_container_status_restarts_total{namespace="secure-namespace",pod=~"secure-deployment-.*"}[1h]) > 3
+      for: 0m
+      labels:
+        severity: warning
+        component: secure-app
+      annotations:
+        summary: "Pod {{ $labels.pod }} is restarting too often"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last hour."
+    
+    # Security context violation alert
+    - alert: SecurityContextViolation
+      expr: kube_pod_container_info{namespace="secure-namespace",container_id!=""} and on(pod, namespace) kube_pod_info{created_by_kind!="Job"} unless on(pod, namespace, container) kube_pod_container_info{namespace="secure-namespace",container_id!=""} and on(pod, namespace, container) kube_pod_container_status_running{namespace="secure-namespace"} == 1
+      for: 0m
+      labels:
+        severity: critical
+        component: security
+      annotations:
+        summary: "Potential security context violation detected"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} may be violating security context requirements."
+---
+# PodDisruptionBudget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: secure-app-pdb
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    app.kubernetes.io/component: availability
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: secure-app

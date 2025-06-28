@@ -30,3 +30,9 @@ kind: ServiceAccount
 metadata:
   name: restricted-sa
   namespace: default
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    security.kubernetes.io/policy: restricted
+  annotations:
+    security.kubernetes.io/description: "Restricted service account with minimal permissions"
+automountServiceAccountToken: false

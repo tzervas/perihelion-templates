@@ -1,0 +1,118 @@
+# Resource Quota for namespace-level resource limits
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: secure-namespace-quota
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    security.kubernetes.io/policy: restricted
+spec:
+  hard:
+    # Compute resources
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    
+    # Storage resources
+    requests.storage: 100Gi
+    persistentvolumeclaims: "10"
+    
+    # Object counts
+    pods: "10"
+    replicationcontrollers: "20"
+    resourcequotas: "1"
+    secrets: "10"
+    configmaps: "10"
+    services: "5"
+    services.loadbalancers: "2"
+    services.nodeports: "0"  # Disable NodePort services for security
+    
+    # Security-related limits
+    count/deployments.apps: "10"
+    count/replicasets.apps: "20"
+    count/statefulsets.apps: "5"
+    count/jobs.batch: "5"
+    count/cronjobs.batch: "2"
+---
+# LimitRange for default resource limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: secure-namespace-limits
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    security.kubernetes.io/policy: restricted
+spec:
+  limits:
+  # Container limits
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+      ephemeral-storage: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+      ephemeral-storage: "100Mi"
+    max:
+      cpu: "2"
+      memory: "2Gi"
+      ephemeral-storage: "4Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+      ephemeral-storage: "50Mi"
+  
+  # Pod limits
+  - type: Pod
+    max:
+      cpu: "4"
+      memory: "4Gi"
+      ephemeral-storage: "8Gi"
+  
+  # PVC limits
+  - type: PersistentVolumeClaim
+    max:
+      storage: "10Gi"
+    min:
+      storage: "1Gi"
+---
+# Network Policy for allowed egress (DNS and HTTPS)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-https-egress
+  namespace: secure-namespace
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    security.kubernetes.io/policy: restricted
+spec:
+  podSelector:
+    matchLabels:
+      app: secure-app
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS for external API calls
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow HTTP for health checks (internal only)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: secure-namespace
+    ports:
+    - protocol: TCP
+      port: 8080
