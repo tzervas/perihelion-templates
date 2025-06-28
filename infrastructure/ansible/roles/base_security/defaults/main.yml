@@ -8,6 +8,16 @@ security_packages:
   - apparmor
   - apparmor-utils
   - rkhunter
+  - aide
+  - clamav
+  - clamav-daemon
+  - libpam-pwquality
+  - libpam-tmpdir
+  - needrestart
+  - debsums
+  - chkrootkit
+  - lynis
+  - chrony
 
 # SSH Configuration
 ssh_port: 22
@@ -23,8 +33,15 @@ ssh_max_sessions: 2
 ufw_enabled: true
 ufw_default_incoming_policy: "deny"
 ufw_default_outgoing_policy: "deny"
-ufw_allowed_ports:
-  - { port: "{{ ssh_port }}", proto: "tcp" }
+ufw_allowed_incoming_ports:
+  - { port: "{{ ssh_port }}", proto: "tcp", comment: "SSH access" }
+ufw_allowed_outgoing_ports:
+  - { port: "53", proto: "udp", comment: "DNS queries" }
+  - { port: "53", proto: "tcp", comment: "DNS queries" }
+  - { port: "80", proto: "tcp", comment: "HTTP for package updates" }
+  - { port: "443", proto: "tcp", comment: "HTTPS for package updates" }
+  - { port: "123", proto: "udp", comment: "NTP time sync" }
+  - { port: "22", proto: "tcp", comment: "SSH outgoing" }
 
 # Fail2ban Configuration
 fail2ban_enabled: true

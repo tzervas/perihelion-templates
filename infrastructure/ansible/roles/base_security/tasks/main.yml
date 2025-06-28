@@ -34,12 +34,32 @@
 - name: Configure UFW default policies
   community.general.ufw:
     state: enabled
-    policy: deny
-    direction: "{{ item }}"
+    policy: "{{ item.policy }}"
+    direction: "{{ item.direction }}"
   loop:
-    - incoming
-    - outgoing
-    - routed
+    - { policy: "{{ ufw_default_incoming_policy }}", direction: "incoming" }
+    - { policy: "{{ ufw_default_outgoing_policy }}", direction: "outgoing" }
+    - { policy: "deny", direction: "routed" }
+  tags: ["security", "firewall"]
+
+- name: Allow incoming traffic for essential services
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ ufw_allowed_incoming_ports }}"
+  tags: ["security", "firewall"]
+
+- name: Allow outgoing traffic for essential services
+  community.general.ufw:
+    rule: allow
+    direction: out
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ ufw_allowed_outgoing_ports }}"
   tags: ["security", "firewall"]
 
 - name: Configure SSH hardening
@@ -152,4 +172,73 @@
         - { name: "net.ipv4.tcp_syncookies", value: "1" }
         - { name: "net.ipv6.conf.all.accept_redirects", value: "0" }
         - { name: "kernel.randomize_va_space", value: "2" }
+        - { name: "kernel.dmesg_restrict", value: "1" }
+        - { name: "kernel.kptr_restrict", value: "2" }
+        - { name: "kernel.yama.ptrace_scope", value: "1" }
+        - { name: "net.ipv4.conf.all.log_martians", value: "1" }
+        - { name: "net.ipv4.conf.default.log_martians", value: "1" }
+        - { name: "net.ipv4.icmp_echo_ignore_broadcasts", value: "1" }
+        - { name: "net.ipv4.icmp_ignore_bogus_error_responses", value: "1" }
   tags: ["security", "sysctl"]
+
+- name: Configure additional security tools
+  block:
+    - name: Initialize AIDE database
+      ansible.builtin.command: aide --init
+      args:
+        creates: /var/lib/aide/aide.db.new
+      tags: ["security", "aide"]
+
+    - name: Create AIDE database
+      ansible.builtin.command: mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+      args:
+        creates: /var/lib/aide/aide.db
+      tags: ["security", "aide"]
+
+    - name: Setup AIDE cron job for daily checks
+      ansible.builtin.cron:
+        name: "AIDE integrity check"
+        minute: "0"
+        hour: "2"
+        job: "/usr/bin/aide --check"
+        user: root
+      tags: ["security", "aide"]
+
+    - name: Update ClamAV database
+      ansible.builtin.command: freshclam
+      failed_when: false
+      changed_when: false
+      tags: ["security", "clamav"]
+
+    - name: Setup ClamAV daily scan
+      ansible.builtin.cron:
+        name: "ClamAV daily scan"
+        minute: "0"
+        hour: "3"
+        job: "/usr/bin/clamscan -r /home /var/log/clamav-scan.log"
+        user: root
+      tags: ["security", "clamav"]
+
+    - name: Configure chrony for secure time sync
+      ansible.builtin.lineinfile:
+        path: /etc/chrony/chrony.conf
+        regexp: '^server '
+        line: 'server time.nist.gov iburst'
+        backup: yes
+      notify: restart chrony
+      tags: ["security", "time"]
+
+    - name: Run rkhunter update
+      ansible.builtin.command: rkhunter --update
+      changed_when: false
+      tags: ["security", "rkhunter"]
+
+    - name: Setup rkhunter daily check
+      ansible.builtin.cron:
+        name: "RKHunter daily check"
+        minute: "0"
+        hour: "4"
+        job: "/usr/bin/rkhunter --check --sk"
+        user: root
+      tags: ["security", "rkhunter"]
+  tags: ["security", "tools"]

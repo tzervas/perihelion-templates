@@ -18,3 +18,26 @@
   ansible.builtin.service:
     name: rsyslog
     state: restarted
+
+- name: restart chrony
+  ansible.builtin.service:
+    name: chrony
+    state: restarted
+
+- name: restart clamav-daemon
+  ansible.builtin.service:
+    name: clamav-daemon
+    state: restarted
+
+- name: reload ufw
+  community.general.ufw:
+    state: reloaded
+
+- name: restart apparmor
+  ansible.builtin.service:
+    name: apparmor
+    state: restarted
+
+- name: restart aide
+  ansible.builtin.command: aide --init
+  changed_when: false
