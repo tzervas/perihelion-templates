@@ -2,12 +2,20 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+# Security policies and standards
+- security/pod-security-standards.yaml
+- security/resource-constraints.yaml
+# Network policies
 - network-policies/default-deny.yaml
-- security/pod-security-policy.yaml
+# RBAC
 - rbac/restricted-role.yaml
+# Workloads
 - workloads/secure-pod.yaml
 - workloads/secure-deployment.yaml
+# Networking
 - networking/secure-service.yaml
+# Monitoring and observability
+- monitoring/monitoring.yaml
 
 commonLabels:
   app.kubernetes.io/managed-by: kustomize

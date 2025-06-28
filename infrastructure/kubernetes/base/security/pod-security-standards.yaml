@@ -1,0 +1,44 @@
+# Pod Security Standards - Restricted Namespace
+# This replaces the deprecated PodSecurityPolicy with modern Pod Security Standards
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secure-namespace
+  labels:
+    # Pod Security Standards labels for Kubernetes 1.23+
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    # Additional security labels
+    security.kubernetes.io/policy: restricted
+    app.kubernetes.io/part-of: secure-templates
+  annotations:
+    # Documentation for security policies
+    security.kubernetes.io/description: "Restricted namespace with Pod Security Standards enforced"
+---
+# ValidatingAdmissionWebhook for additional security checks
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionWebhook
+metadata:
+  name: security-webhook
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+webhooks:
+- name: security-validation.example.com
+  clientConfig:
+    service:
+      name: security-webhook-service
+      namespace: secure-namespace
+      path: "/validate"
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["apps"]
+    apiVersions: ["v1"]
+    resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: None
+  failurePolicy: Fail

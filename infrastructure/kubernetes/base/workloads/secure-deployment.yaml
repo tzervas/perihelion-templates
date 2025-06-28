@@ -25,7 +25,8 @@ spec:
           type: RuntimeDefault
       containers:
       - name: secure-container
-        image: nginx:1.25
+        # Pin to specific digest for supply chain security
+        image: nginx:1.25.3@sha256:4c0fdaa8b6341bfdeca5f18f7837462c80cff90527ee35ef185571e1c327beac
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

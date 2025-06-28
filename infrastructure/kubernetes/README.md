@@ -20,30 +20,55 @@ kubernetes/
 
 ## Security Features
 
-1. **Pod Security**
-   - Non-root user execution
+1. **Pod Security Standards (Kubernetes 1.23+)**
+   - Replaces deprecated PodSecurityPolicy
+   - Restricted security profile enforcement
+   - Non-root user execution (uid 1000)
    - Read-only root filesystem
    - Resource limits and requests
    - Security context configuration
-   - Seccomp and AppArmor profiles
+   - SecComp profiles (RuntimeDefault)
+   - Container images pinned to SHA256 digests
 
-2. **Network Security**
-   - Default deny policies
-   - Explicit ingress/egress rules
+2. **Resource Management**
+   - ResourceQuota for namespace-level limits
+   - LimitRange for default resource constraints
+   - Ephemeral storage limits
+   - Pod disruption budgets for high availability
+   - Disabled NodePort services for security
+   - CPU and memory quotas enforced
+
+3. **Network Security**
+   - Default deny ingress/egress policies
+   - Explicit allow rules for DNS and HTTPS
    - Service mesh integration readiness
    - Internal-only service exposure
+   - Controlled inter-pod communication
+   - Network isolation by default
 
-3. **Access Control**
+4. **Access Control**
    - Least privilege RBAC roles
    - Service account restrictions
-   - Token automounting disabled
+   - Token automounting explicitly disabled
    - Resource access limitations
+   - ValidatingAdmissionWebhook controls
+   - No cluster-level permissions
 
-4. **Container Security**
-   - Dropped capabilities
-   - No privilege escalation
-   - Resource quotas
+5. **Container Security**
+   - All capabilities dropped
+   - No privilege escalation allowed
    - Liveness and readiness probes
+   - EmptyDir volumes for writable paths
+   - Security context enforcement
+   - Non-privileged execution
+
+6. **Monitoring & Observability**
+   - Prometheus ServiceMonitor/PodMonitor
+   - Security-focused alerts (PrometheusRules)
+   - Resource usage monitoring
+   - Pod restart detection
+   - Security context violation alerts
+   - High availability monitoring
 
 ## Usage
 
