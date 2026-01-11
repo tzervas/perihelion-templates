@@ -1,0 +1,30 @@
+apiVersion: v2
+name: secure-app
+description: A secure application Helm chart template
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+maintainers:
+  - name: Tyler Zervas
+    email: tyler@example.com
+
+keywords:
+  - security
+  - template
+  - best-practices
+
+dependencies:
+  - name: cert-manager
+    version: "~1.15.3"  # Pin to secure, recent version
+    repository: https://charts.jetstack.io
+    condition: certManager.enabled
+  - name: kube-prometheus-stack
+    version: "~61.7.2"  # Use comprehensive monitoring stack
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.enabled
+    
+# Annotations for security and compliance
+annotations:
+  "helm.sh/security-policy": "restricted"
+  "helm.sh/compliance": "security-hardened"

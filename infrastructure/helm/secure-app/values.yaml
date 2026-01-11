@@ -1,0 +1,236 @@
+# Default values for secure-app
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  # Image settings
+  image:
+    registry: "docker.io"
+    repository: nginx
+    tag: "1.25.3"
+    pullPolicy: IfNotPresent
+    # SHA256 digest for supply chain security (required)
+    digest: "sha256:4c0fdaa8b6341bfdeca5f18f7837462c80cff90527ee35ef185571e1c327beac"
+  
+  # Security settings
+  security:
+    # Pod security context
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 3000
+      fsGroup: 2000
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+    
+    # Network policies
+    networkPolicies:
+      enabled: true
+      # Default deny all, explicit allow rules below
+      ingressRules: []
+      egressRules:
+        # Allow DNS resolution
+        - to: []
+          ports:
+            - protocol: UDP
+              port: 53
+            - protocol: TCP
+              port: 53
+        # Allow HTTPS for external API calls
+        - to: []
+          ports:
+            - protocol: TCP
+              port: 443
+        # Allow internal HTTP traffic (within namespace)
+        - to:
+            - namespaceSelector:
+                matchLabels:
+                  name: {{ .Release.Namespace }}
+          ports:
+            - protocol: TCP
+              port: 8080
+
+# Deployment configuration
+deployment:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: "0.5"
+      memory: 256Mi
+  
+  # Probes configuration
+  probes:
+    liveness:
+      httpGet:
+        path: /healthz
+        port: http
+      initialDelaySeconds: 3
+      periodSeconds: 3
+    readiness:
+      httpGet:
+        path: /readyz
+        port: http
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+  hosts: []
+  tls: []
+
+# RBAC configuration
+rbac:
+  enabled: true
+  # Service account configuration
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+  # Role and RoleBinding configuration
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "replicasets"]
+      verbs: ["get", "list", "watch"]
+
+# Certificate management
+certManager:
+  enabled: false
+  # Certificate configuration
+  certificate:
+    enabled: false
+    duration: 2160h # 90 days
+    renewBefore: 360h # 15 days
+    organization:
+      - Security
+    dnsNames: []
+    issuerRef:
+      name: letsencrypt-prod
+      kind: ClusterIssuer
+
+# Monitoring configuration
+monitoring:
+  enabled: false
+  # ServiceMonitor configuration for Prometheus
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    port: metrics
+
+# Essential volumes for read-only filesystem
+volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: var-run
+    emptyDir: {}
+  - name: cache
+    emptyDir: {}
+
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+  - name: var-run
+    mountPath: /var/run
+  - name: cache
+    mountPath: /var/cache/nginx
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+  # maxUnavailable: 1
+
+# Resource Quota for namespace
+resourceQuota:
+  enabled: true
+  hard:
+    # Compute resources
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    # Storage resources
+    requests.storage: 100Gi
+    persistentvolumeclaims: "10"
+    # Object counts
+    pods: "10"
+    services: "5"
+    secrets: "10"
+    configmaps: "10"
+    services.nodeports: "0"  # Disable NodePort for security
+    count/deployments.apps: "10"
+
+# Limit Range for default limits
+limitRange:
+  enabled: true
+  limits:
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+        ephemeral-storage: "1Gi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+        ephemeral-storage: "100Mi"
+      max:
+        cpu: "2"
+        memory: "2Gi"
+        ephemeral-storage: "4Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+        ephemeral-storage: "50Mi"
+    - type: Pod
+      max:
+        cpu: "4"
+        memory: "4Gi"
+        ephemeral-storage: "8Gi"
