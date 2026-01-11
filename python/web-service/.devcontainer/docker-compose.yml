@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      # WARNING: The following mounts expose sensitive host credentials
+      # Comment out these lines if you don't need git signing or want better security isolation
+      # Alternative: Configure git credentials inside the container manually
+      - ~/.gitconfig:/home/vscode/.gitconfig:ro
+      - ~/.gnupg:/home/vscode/.gnupg:ro
+    command: sleep infinity
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=app
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=devpassword
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KEYCLOAK_HOST=keycloak
+      - KEYCLOAK_PORT=8080
+      - JAEGER_HOST=jaeger
+      - PYTHONPATH=/workspace/src
+    depends_on:
+      - db
+      - redis
+      - keycloak
+      - jaeger
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  db:
+    image: postgres:15.5-alpine@sha256:c9bc2a3ceca16a0ecb7ae43d13de0a55de7a4a9f79b92998b1dcfc6f27b2b4ff
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=app
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=devpassword
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7.2.4-alpine@sha256:3134997edb04277814aa51a4175a588d45eb4299272f8eff2307bbf8b39e4d43
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.4@sha256:47c9cf1b67b37ceab24d19ad03e3a4e27c9c0b7cea36d20bbaa5893ff94eb6cf
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
+      - KC_DB_USERNAME=app
+      - KC_DB_PASSWORD=devpassword
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52@sha256:e15af2bbdbb56bcaa90d84e8ec6a7c7e5de5e58bf7e8e5b4a5c73f8b6e9a7c2c
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:16686 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres-data:
+  redis-data:
