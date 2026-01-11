@@ -1,0 +1,43 @@
+---
+- name: restart sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+
+- name: restart fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted
+
+- name: restart rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+
+- name: restart chrony
+  ansible.builtin.service:
+    name: chrony
+    state: restarted
+
+- name: restart clamav-daemon
+  ansible.builtin.service:
+    name: clamav-daemon
+    state: restarted
+
+- name: reload ufw
+  community.general.ufw:
+    state: reloaded
+
+- name: restart apparmor
+  ansible.builtin.service:
+    name: apparmor
+    state: restarted
+
+- name: restart aide
+  ansible.builtin.command: aide --init
+  changed_when: false

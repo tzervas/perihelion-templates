@@ -1,0 +1,72 @@
+all:
+  children:
+    production:
+      children:
+        web_servers:
+          hosts:
+            web[01:03].example.com:
+          vars:
+            app_environment: production
+            ansible_user: app_user
+            ansible_become: true
+            
+        database_servers:
+          hosts:
+            db[01:02].example.com:
+          vars:
+            app_environment: production
+            ansible_user: db_user
+            ansible_become: true
+            
+    staging:
+      children:
+        web_servers:
+          hosts:
+            web-staging[01:02].example.com:
+          vars:
+            app_environment: staging
+            ansible_user: app_user
+            ansible_become: true
+            
+        database_servers:
+          hosts:
+            db-staging01.example.com:
+          vars:
+            app_environment: staging
+            ansible_user: db_user
+            ansible_become: true
+            
+  vars:
+    # Python interpreter
+    ansible_python_interpreter: /usr/bin/python3
+    
+    # SSH security settings
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/ssh/ssh_known_hosts -o PasswordAuthentication=no -o ChallengeResponseAuthentication=no -o PubkeyAuthentication=yes'
+    
+    # Connection settings
+    ansible_ssh_pipelining: true
+    ansible_connection_timeout: 30
+    ansible_command_timeout: 60
+    
+    # Security settings
+    ansible_become_method: sudo
+    ansible_become_ask_pass: false
+    
+    # Host verification
+    ansible_host_key_checking: true
+    
+    # Logging and monitoring
+    ansible_log_path: /var/log/ansible.log
+    
+    # Security hardening variables
+    security_enhanced_logging: true
+    security_compliance_mode: "cis"
+    security_monitoring_enabled: true
+    
+    # Network security
+    firewall_strict_mode: true
+    intrusion_detection_enabled: true
+    
+    # Backup and recovery
+    backup_retention_days: 30
+    disaster_recovery_enabled: true

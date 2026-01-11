@@ -1,0 +1,41 @@
+# /etc/security/limits.conf
+#
+# This file sets the resource limits for the users logged in via PAM.
+# It does not affect resource limits of the system services.
+#
+# Security-hardened limits configuration
+
+# End of file
+* soft nofile {{ limits_nofile_soft }}
+* hard nofile {{ limits_nofile_hard }}
+* soft nproc {{ limits_nproc_soft }}
+* hard nproc {{ limits_nproc_hard }}
+
+# Prevent core dumps for security
+* hard core 0
+
+# Limit memory usage to prevent DoS attacks
+* soft memlock 64
+* hard memlock 64
+
+# Limit CPU time to prevent resource exhaustion
+* soft cpu 3600
+* hard cpu 3600
+
+# Limit file size to prevent disk space attacks
+* soft fsize 1048576
+* hard fsize 1048576
+
+# Limit data segment size
+* soft data 1048576
+* hard data 1048576
+
+# Limit stack size
+* soft stack 8192
+* hard stack 8192
+
+# Restrict root limits for enhanced security
+root soft nofile {{ limits_nofile_soft }}
+root hard nofile {{ limits_nofile_hard }}
+root soft nproc {{ limits_nproc_soft }}
+root hard nproc {{ limits_nproc_hard }}

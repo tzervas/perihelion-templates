@@ -1,0 +1,91 @@
+# /etc/logrotate.conf - Security-hardened log rotation configuration
+
+# Rotate log files {{ log_rotate_interval }}
+{{ log_rotate_interval }}
+
+# Keep {{ log_rotate_keep }} days worth of backlogs
+rotate {{ log_rotate_keep }}
+
+# Create new (empty) log files after rotating old ones
+create
+
+# Use date as a suffix of the rotated file
+dateext
+
+# Uncomment to use date-yesterday for yesterday's log file
+#dateyesterday
+
+# Compress rotated files
+compress
+
+# RPM packages drop log rotation information into this directory
+include /etc/logrotate.d
+
+# No packages own wtmp and btmp -- we'll rotate them here
+/var/log/wtmp {
+    {{ log_rotate_interval }}
+    missingok
+    rotate {{ log_rotate_keep }}
+    compress
+    delaycompress
+    minsize 1M
+    create 0664 root utmp
+}
+
+/var/log/btmp {
+    {{ log_rotate_interval }}
+    missingok
+    rotate {{ log_rotate_keep }}
+    compress
+    delaycompress
+    minsize 1M
+    create 0600 root utmp
+}
+
+# Security-specific log rotation
+/var/log/auth.log {
+    {{ log_rotate_interval }}
+    missingok
+    rotate {{ log_rotate_keep }}
+    compress
+    delaycompress
+    sharedscripts
+    create 0640 syslog adm
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}
+
+/var/log/sudo.log {
+    {{ log_rotate_interval }}
+    missingok
+    rotate {{ log_rotate_keep }}
+    compress
+    delaycompress
+    create 0640 root adm
+}
+
+/var/log/audit/audit.log {
+    {{ log_rotate_interval }}
+    missingok
+    rotate {{ log_rotate_keep }}
+    compress
+    delaycompress
+    create 0600 root root
+    postrotate
+        /sbin/service auditd restart > /dev/null 2>&1 || true
+    endscript
+}
+
+# Fail2ban logs
+/var/log/fail2ban.log {
+    {{ log_rotate_interval }}
+    missingok
+    rotate {{ log_rotate_keep }}
+    compress
+    delaycompress
+    create 0640 root adm
+    postrotate
+        /usr/bin/fail2ban-client reload > /dev/null 2>&1 || true
+    endscript
+}

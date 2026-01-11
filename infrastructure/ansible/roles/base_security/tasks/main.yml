@@ -1,0 +1,244 @@
+---
+# Base security hardening tasks
+
+- name: Update all packages to latest version
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: full
+  when: ansible_os_family == "Debian"
+  tags: ["security", "patching"]
+
+- name: Install security packages
+  ansible.builtin.package:
+    name:
+      - fail2ban
+      - ufw
+      - unattended-upgrades
+      - auditd
+      - apparmor
+      - apparmor-utils
+      - rkhunter
+    state: present
+  tags: ["security", "packages"]
+
+- name: Configure automatic security updates
+  ansible.builtin.template:
+    src: "20auto-upgrades.j2"
+    dest: "/etc/apt/apt.conf.d/20auto-upgrades"
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+  tags: ["security", "patching"]
+
+- name: Configure UFW default policies
+  community.general.ufw:
+    state: enabled
+    policy: "{{ item.policy }}"
+    direction: "{{ item.direction }}"
+  loop:
+    - { policy: "{{ ufw_default_incoming_policy }}", direction: "incoming" }
+    - { policy: "{{ ufw_default_outgoing_policy }}", direction: "outgoing" }
+    - { policy: "deny", direction: "routed" }
+  tags: ["security", "firewall"]
+
+- name: Allow incoming traffic for essential services
+  community.general.ufw:
+    rule: allow
+    direction: in
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ ufw_allowed_incoming_ports }}"
+  tags: ["security", "firewall"]
+
+- name: Allow outgoing traffic for essential services
+  community.general.ufw:
+    rule: allow
+    direction: out
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ ufw_allowed_outgoing_ports }}"
+  tags: ["security", "firewall"]
+
+- name: Configure SSH hardening
+  ansible.builtin.template:
+    src: "sshd_config.j2"
+    dest: "/etc/ssh/sshd_config"
+    owner: root
+    group: root
+    mode: "0600"
+    validate: "/usr/sbin/sshd -t -f %s"
+  notify: restart sshd
+  tags: ["security", "ssh"]
+
+- name: Configure PAM password policies
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^minlen', line: 'minlen = 14' }
+    - { regexp: '^dcredit', line: 'dcredit = -1' }
+    - { regexp: '^ucredit', line: 'ucredit = -1' }
+    - { regexp: '^lcredit', line: 'lcredit = -1' }
+    - { regexp: '^ocredit', line: 'ocredit = -1' }
+  tags: ["security", "authentication"]
+
+- name: Configure system-wide security limits
+  ansible.builtin.template:
+    src: "limits.conf.j2"
+    dest: "/etc/security/limits.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  tags: ["security", "limits"]
+
+- name: Configure audit rules
+  ansible.builtin.template:
+    src: "audit.rules.j2"
+    dest: "/etc/audit/rules.d/audit.rules"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: restart auditd
+  tags: ["security", "audit"]
+
+- name: Enable and configure fail2ban
+  block:
+    - name: Copy fail2ban configuration
+      ansible.builtin.template:
+        src: "jail.local.j2"
+        dest: "/etc/fail2ban/jail.local"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart fail2ban
+
+    - name: Ensure fail2ban is running
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: yes
+  tags: ["security", "fail2ban"]
+
+- name: Configure system logging
+  block:
+    - name: Configure rsyslog
+      ansible.builtin.template:
+        src: "rsyslog.conf.j2"
+        dest: "/etc/rsyslog.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart rsyslog
+
+    - name: Configure log rotation
+      ansible.builtin.template:
+        src: "logrotate.conf.j2"
+        dest: "/etc/logrotate.conf"
+        owner: root
+        group: root
+        mode: "0644"
+  tags: ["security", "logging"]
+
+- name: Configure AppArmor
+  block:
+    - name: Enable AppArmor
+      ansible.builtin.service:
+        name: apparmor
+        state: started
+        enabled: yes
+
+    - name: Set AppArmor to enforcing mode
+      ansible.builtin.command: aa-enforce /etc/apparmor.d/*
+      changed_when: false
+  tags: ["security", "apparmor"]
+
+- name: Configure system hardening
+  block:
+    - name: Configure sysctl security settings
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_file: /etc/sysctl.d/99-security.conf
+        reload: yes
+      loop:
+        - { name: "net.ipv4.conf.all.accept_redirects", value: "0" }
+        - { name: "net.ipv4.conf.all.accept_source_route", value: "0" }
+        - { name: "net.ipv4.conf.all.rp_filter", value: "1" }
+        - { name: "net.ipv4.tcp_syncookies", value: "1" }
+        - { name: "net.ipv6.conf.all.accept_redirects", value: "0" }
+        - { name: "kernel.randomize_va_space", value: "2" }
+        - { name: "kernel.dmesg_restrict", value: "1" }
+        - { name: "kernel.kptr_restrict", value: "2" }
+        - { name: "kernel.yama.ptrace_scope", value: "1" }
+        - { name: "net.ipv4.conf.all.log_martians", value: "1" }
+        - { name: "net.ipv4.conf.default.log_martians", value: "1" }
+        - { name: "net.ipv4.icmp_echo_ignore_broadcasts", value: "1" }
+        - { name: "net.ipv4.icmp_ignore_bogus_error_responses", value: "1" }
+  tags: ["security", "sysctl"]
+
+- name: Configure additional security tools
+  block:
+    - name: Initialize AIDE database
+      ansible.builtin.command: aide --init
+      args:
+        creates: /var/lib/aide/aide.db.new
+      tags: ["security", "aide"]
+
+    - name: Create AIDE database
+      ansible.builtin.command: mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+      args:
+        creates: /var/lib/aide/aide.db
+      tags: ["security", "aide"]
+
+    - name: Setup AIDE cron job for daily checks
+      ansible.builtin.cron:
+        name: "AIDE integrity check"
+        minute: "0"
+        hour: "2"
+        job: "/usr/bin/aide --check"
+        user: root
+      tags: ["security", "aide"]
+
+    - name: Update ClamAV database
+      ansible.builtin.command: freshclam
+      failed_when: false
+      changed_when: false
+      tags: ["security", "clamav"]
+
+    - name: Setup ClamAV daily scan
+      ansible.builtin.cron:
+        name: "ClamAV daily scan"
+        minute: "0"
+        hour: "3"
+        job: "/usr/bin/clamscan -r /home /var/log/clamav-scan.log"
+        user: root
+      tags: ["security", "clamav"]
+
+    - name: Configure chrony for secure time sync
+      ansible.builtin.lineinfile:
+        path: /etc/chrony/chrony.conf
+        regexp: '^server '
+        line: 'server time.nist.gov iburst'
+        backup: yes
+      notify: restart chrony
+      tags: ["security", "time"]
+
+    - name: Run rkhunter update
+      ansible.builtin.command: rkhunter --update
+      changed_when: false
+      tags: ["security", "rkhunter"]
+
+    - name: Setup rkhunter daily check
+      ansible.builtin.cron:
+        name: "RKHunter daily check"
+        minute: "0"
+        hour: "4"
+        job: "/usr/bin/rkhunter --check --sk"
+        user: root
+      tags: ["security", "rkhunter"]
+  tags: ["security", "tools"]

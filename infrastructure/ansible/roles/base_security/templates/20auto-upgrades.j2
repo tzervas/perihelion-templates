@@ -1,0 +1,35 @@
+// /etc/apt/apt.conf.d/20auto-upgrades
+// Security-focused automatic upgrade configuration
+
+// Enable automatic package list updates
+APT::Periodic::Update-Package-Lists "{{ auto_updates_interval }}";
+
+// Enable automatic download of upgradeable packages
+APT::Periodic::Download-Upgradeable-Packages "{{ auto_updates_interval }}";
+
+// Enable automatic installation of security updates
+APT::Periodic::Unattended-Upgrade "{{ auto_updates_interval }}";
+
+// Enable automatic cleaning of downloaded packages
+APT::Periodic::AutocleanInterval "7";
+
+// Enable verbose logging for security monitoring
+APT::Periodic::Verbose "2";
+
+// Remove unused kernel packages automatically for security
+APT::Periodic::CleanInterval "7";
+
+// Automatically reboot if required after security updates
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "02:00";
+
+// Send email notifications for security updates
+Unattended-Upgrade::Mail "root";
+Unattended-Upgrade::MailOnlyOnError "false";
+
+// Remove unused dependencies after upgrade
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+
+// Automatically remove new unused dependencies
+Unattended-Upgrade::Remove-New-Unused-Dependencies "true";

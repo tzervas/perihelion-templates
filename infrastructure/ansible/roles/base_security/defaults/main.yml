@@ -1,0 +1,93 @@
+---
+# Security package configuration
+security_packages:
+  - fail2ban
+  - ufw
+  - unattended-upgrades
+  - auditd
+  - apparmor
+  - apparmor-utils
+  - rkhunter
+  - aide
+  - clamav
+  - clamav-daemon
+  - libpam-pwquality
+  - libpam-tmpdir
+  - needrestart
+  - debsums
+  - chkrootkit
+  - lynis
+  - chrony
+
+# SSH Configuration
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_x11_forwarding: "no"
+ssh_max_auth_tries: 3
+ssh_allow_agent_forwarding: "no"
+ssh_allow_tcp_forwarding: "no"
+ssh_max_sessions: 2
+
+# Firewall Configuration
+ufw_enabled: true
+ufw_default_incoming_policy: "deny"
+ufw_default_outgoing_policy: "deny"
+ufw_allowed_incoming_ports:
+  - { port: "{{ ssh_port }}", proto: "tcp", comment: "SSH access" }
+ufw_allowed_outgoing_ports:
+  - { port: "53", proto: "udp", comment: "DNS queries" }
+  - { port: "53", proto: "tcp", comment: "DNS queries" }
+  - { port: "80", proto: "tcp", comment: "HTTP for package updates" }
+  - { port: "443", proto: "tcp", comment: "HTTPS for package updates" }
+  - { port: "123", proto: "udp", comment: "NTP time sync" }
+  - { port: "22", proto: "tcp", comment: "SSH outgoing" }
+
+# Fail2ban Configuration
+fail2ban_enabled: true
+fail2ban_bantime: 3600
+fail2ban_findtime: 600
+fail2ban_maxretry: 3
+
+# System Audit Configuration
+audit_enabled: true
+audit_backlog_limit: 8192
+audit_rules_enabled: true
+
+# Password Policy
+password_min_length: 14
+password_min_digit: 1
+password_min_uppercase: 1
+password_min_lowercase: 1
+password_min_special: 1
+
+# System Limits
+limits_nofile_soft: 65535
+limits_nofile_hard: 65535
+limits_nproc_soft: 2048
+limits_nproc_hard: 2048
+
+# Logging Configuration
+log_retention_days: 90
+log_rotate_interval: "daily"
+log_rotate_keep: 90
+
+# AppArmor Configuration
+apparmor_enabled: true
+apparmor_mode: "enforce"
+
+# Sysctl Security Settings
+sysctl_security:
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.tcp_syncookies: 1
+  net.ipv6.conf.all.accept_redirects: 0
+  kernel.randomize_va_space: 2
+
+# Auto-update Configuration
+auto_updates_enabled: true
+auto_updates_interval: "1"
+auto_updates_allowed_origins:
+  - "${distro_id}:${distro_codename}"
+  - "${distro_id}:${distro_codename}-security"
