@@ -1,0 +1,38 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: restricted-role
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restricted-role-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: restricted-sa
+  namespace: default
+roleRef:
+  kind: Role
+  name: restricted-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: restricted-sa
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: secure-templates
+    security.kubernetes.io/policy: restricted
+  annotations:
+    security.kubernetes.io/description: "Restricted service account with minimal permissions"
+automountServiceAccountToken: false
